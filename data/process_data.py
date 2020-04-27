@@ -14,12 +14,12 @@ def load_data(messages_filepath, categories_filepath):
            4. return the merged dataframe
     '''
 
-    df_messages = pd.read_csv(messages_filepath)
+    # load messages and categories
+    messages=pd.read_csv(messages_filepath)
+    categories=pd.read_csv(categories_filepath)
     
-    df_categories = pd.read_csv(categories_filepath)
-    
-    #merging messages and categories on 'id' column
-    df = pd.merge(df_messages, df_categories, on='id')
+    # merge dataframes
+    df = pd.merge(messages, categories, on = 'id')
     
     return df
 
@@ -35,28 +35,24 @@ def clean_data(df):
         5. remove any duplicate messages
     '''
 
-    #creating a category for each category value which are found by seperating them
+    # Split the values in the categories column on the ;
     categories = df['categories'].str.split(';', expand=True)
-    
-    #creating category of columns
-    category_colnames = categories[:1].squeeze().apply(lambda x: x[:-2])
 
-    #replacing column names in the original dataframe
+    # Rename columns of categories with new column names.
+    row = categories.iloc[1]
+    category_colnames = row.apply(lambda x: x.split('-')[0])
     categories.columns = category_colnames
 
+    # Convert category values to just numbers 0 or 1
     for column in categories:
-        
-        # set each value to be the last character of the string
-        categories[column] = categories[column].apply(lambda x: x[-1])
-    
-        # convert column from string to numeric
-        categories[column] = pd.to_numeric(categories[column], downcast="integer")
+        categories[column] = categories[column].apply(lambda x: int(x.split('-')[1]))
 
-    df.drop("categories", axis=1, inplace=True)
-    
-    #remove duplicates after merging with the categories table
-    df = df.join(categories).drop_duplicates()
-    
+    # Replace categories column in df with new category columns.
+    df.drop('categories', axis = 1, inplace = True)
+    df = df.join(categories)
+
+    # drop duplicates
+    df = df.drop_duplicates()
     return df
 
 
@@ -69,7 +65,8 @@ def save_data(df, database_filename):
     '''
     # Create database engine object
     engine = create_engine('sqlite:///' + database_filename)
-    df.to_sql('DisasterResponse', engine, index=False)
+    df.to_sql('DisasterResponse', engine, if_exists='replace', index=False)
+    engine.dispose()
    
 def main():
     if len(sys.argv) == 4:
@@ -87,7 +84,7 @@ def main():
         save_data(df, database_filepath)
         
         print('Cleaned data saved to database!')
-   
+    
     else:
         print('Please provide the filepaths of the messages and categories '\
               'datasets as the first and second argument respectively, as '\
