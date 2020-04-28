@@ -1,24 +1,110 @@
 import sys
 
+# Import libraries
+import pandas as pd
+import numpy as np
+from sqlalchemy import create_engine
+
+# ML libraries
+import pickle
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import LinearSVC
+
+# NLP libraries
+import re
+import nltk 
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem.wordnet import WordNetLemmatizer
+nltk.download(['punkt', 'wordnet'])
+nltk.download('stopwords')
+
 
 def load_data(database_filepath):
-    pass
-
+    '''
+    INPUT - path to a database
+    OUTPUT - data, labels and categories
+    '''
+    # load data from database
+    engine = create_engine('sqlite:///' + database_filepath)
+    df = pd.read_sql_table('DisasterResponse', engine)
+    X = df.message
+    y = df.iloc[:,4:]
+    category_names = y.columns.tolist()
+    return X,y,category_names
+    
 
 def tokenize(text):
-    pass
+    '''
+    INPUT - raw text
+    OUTPUT - cleaned text
+           1. removes numbers, punctuation and tokenizes text
+           2. performs lemmatization
+           3. remove stopwords
+    '''
+    
+    # remove numbers, punctuation and tokenize text
+    
+    tokens = word_tokenize(re.sub(r"[^a-zA-Z0-9]", " ", text.lower()))
+    
+    # lemmatization 
+    lemma = WordNetLemmatizer()
+    
+    # save cleaned tokens
+    clean_tokens = [lemma.lemmatize(tok).strip() for tok in tokens]
+    
+    # remove stopwords
+    english_stopwords = list(set(stopwords.words('english')))
+    clean_tokens = [token for token in clean_tokens if token not in english_stopwords]
+    
+    return clean_tokens
+    
 
 
 def build_model():
-    pass
+    """
+    INPUT - none
+    OUTPUT - ML model
+        builds an NLP pipeline,  tf-idf(message transformation), RandomForest+MultiOutputClassifier as 
+        classification model , grid search the best parameters
+    """   
+    # NLP pipeline 
+    pipeline = Pipeline([
+        ('vect',CountVectorizer(tokenizer = tokenize)),
+        ('tfidf',TfidfTransformer()),
+        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+    ])
+    # parameters GridSearchCV
+    
+    parameters = {
+    'tfidf__norm':['l2','l1'],
+    'clf__estimator__min_samples_split':[2,3],
+    }
+
+    # Instantiate GridSearchCV
+    model = GridSearchCV(pipeline, param_grid=parameters)
+
+    return model
+   
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    y_pred = model.predict(X_test)
+    for i, col in enumerate(category_names): 
+        print('***********',col,'***********')
+        print(classification_report(Y_test.iloc[:,i], y_pred[:,i]))
 
 
 def save_model(model, model_filepath):
-    pass
+    pickle.dump(model, open(model_filepath, 'wb'))
 
 
 def main():
