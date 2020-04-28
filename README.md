@@ -50,3 +50,9 @@ A web app where an emergency worker can input a new message and get classificati
     `python run.py`
 3. Go to http://0.0.0.0:3001/
 
+### Webapp UI and example
+![Home page to display visualizations](https://github.com/chaitanyakasaraneni/DisasterResponse/blob/disaster_response/images/home_page.png)
+<p align="center">Home page- Display Visualizations</p>
+
+![Example message classification](https://github.com/chaitanyakasaraneni/DisasterResponse/blob/disaster_response/images/example.png)
+<p align="center">Example message classification</p>
