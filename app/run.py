@@ -26,11 +26,11 @@ def tokenize(text):
     return clean_tokens
 
 # load data
-engine = create_engine('sqlite:///../data/YourDatabaseName.db')
-df = pd.read_sql_table('YourTableName', engine)
+engine = create_engine('sqlite:///../data/DisasterResponse.db')
+df = pd.read_sql_table('DisasterResponse', engine)
 
 # load model
-model = joblib.load("../models/your_model_name.pkl")
+model = joblib.load("../models/classifier.pkl")
 
 
 # index webpage displays cool visuals and receives user input text for model
@@ -42,6 +42,10 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+    
+    #since we have lot's of categories let's ; distribution of categories 
+    cat_count = df.iloc[:, 4:].sum().sort_values(ascending=False)
+    cat_hist = list(df.iloc[:, 4:].sum(axis=1))
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -63,7 +67,44 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+        {
+            'data': [
+                Bar(
+                    x=list(cat_count.index),
+                    y=list(cat_count)
+                )
+            ],
+
+            'layout': {
+                'title': 'Disaster response Categories',
+                'yaxis': {
+                    'title': "Messasge Count"
+                },
+                'xaxis': {
+                    'title': "Message Category"
+                }
+            }
+        },
+        {
+            'data': [
+                dict(
+                    x=cat_hist,
+                    type='histogram'
+                ),
+            ],
+
+            'layout': {
+                'title': 'Histogram of Message Category',
+                'yaxis': {
+                    'title': "Counts"
+                },
+                'xaxis': {
+                    'title': "Category type"
+                }
+            }
         }
+        
     ]
     
     # encode plotly graphs in JSON
