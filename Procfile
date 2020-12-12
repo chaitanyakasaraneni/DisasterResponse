@@ -1,1 +1,1 @@
-web: gunicorn app:run
+web: cd ./app/ && python run.py

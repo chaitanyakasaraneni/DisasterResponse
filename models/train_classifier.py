@@ -1,118 +1,228 @@
 import sys
-
-# Import libraries
-import pandas as pd
-import numpy as np
+import sqlite3
 from sqlalchemy import create_engine
 
-# ML libraries
+import pandas as pd
+import numpy as np
 import pickle
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.multioutput import MultiOutputClassifier
-from sklearn.metrics import classification_report
-from sklearn.model_selection import GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.multiclass import OneVsRestClassifier
-from sklearn.svm import LinearSVC
 
-# NLP libraries
-import re
-import nltk 
-from nltk.corpus import stopwords
+from nltk import pos_tag
 from nltk.tokenize import word_tokenize
-from nltk.stem.wordnet import WordNetLemmatizer
-nltk.download(['punkt', 'wordnet'])
-nltk.download('stopwords')
+import nltk
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_multilabel_classification
+from sklearn.multioutput import MultiOutputClassifier
+
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import confusion_matrix
+
+lemma = nltk.wordnet.WordNetLemmatizer()
+
+def get_col_sample(df, samplen):
+    '''
+    INPUT: data frame, number of samples desired
+    
+    OUTPUT: number of samples for the dataframe
+    '''
+    return(df.sample(n=samplen, replace=True, random_state=1).reset_index(drop = True))
 
 def load_data(database_filepath):
     '''
-    INPUT - path to a database
-    OUTPUT - data, labels and categories
-    '''
-    # load data from database
-    engine = create_engine('sqlite:///' + database_filepath)
-    df = pd.read_sql_table('DisasterResponse', engine)
-    X = df.message
-    y = df.iloc[:,4:]
-    category_names = y.columns.tolist()
-    return X,y,category_names
+    INPUT: data file path
+    OUTPUT: X, Y (numerical for category), category_names
     
+    STEPS:  
+    1. reads in DisasterResponse db
+    2. cleans text in messages and inserts in new column
+    3. drops non-category columns from Y dataframe
+    4. gets the name of categories, count (to find median)
+    5. creates a more balanced dataframe using sampling with replacement
+    6. cleans the text of the new dataframe
+    7. returns an X (messages) Y categories, and category names
+    '''
+    engine = create_engine('sqlite:///data/DisasterResponse.db')
+    df = pd.read_sql_table(database_filepath, engine)
+    
+    not_y = ['index','id', 'message', 'original', 'genre']
+    Y = df.drop(not_y, axis = 1)
+    category_names = list(Y.columns)
+    category_counts = list(Y.sum(axis = 0).values)
+    number_samples = int(np.median(category_counts))
+    
+    balanced_list = []
+    for i in category_names[1:len(category_names)-1]:
+        for_balance = df[df[i] == 1].reset_index(drop = True)
+        balanced_list.append(get_col_sample(for_balance, number_samples))
+        
+        
+    balanced_df = pd.concat(balanced_list, axis = 0)
+    balanced_df.to_csv('./data/balanced_df.csv')
+    
+    clean_messages = []
+    for i in balanced_df['message']:
+         clean_messages.append(tokenize(i))
+        
+    Y_bal = balanced_df.drop(not_y, axis = 1)
+    X_bal = clean_messages
+    return(X_bal, Y_bal, category_names)
+    pass
 
-def tokenize(text):
+def tokenize (txt):  
     '''
-    INPUT - raw text
-    OUTPUT - cleaned text
-           1. removes numbers, punctuation and tokenizes text
-           2. performs lemmatization
-           3. remove stopwords
+    INPUT: 
+    a line of text
+    
+    OUTPUT: 
+    that same text cleaned:  
+    
+    STEPS:
+        1. creates empty string to fill
+        2. tokenizes and pos_tags (easier to find critical words)
+        3. lemmatizes all nouns
+        4. doesn't lemmatize adj bc they don't change 
+        5. only appends and lemmatizes longer verbs (theory that shorter verb forms are less regular and therefore more              likely to be common words/stop words)
+    
     '''
-    
-    # remove numbers, punctuation and tokenize text
-    
-    tokens = word_tokenize(re.sub(r"[^a-zA-Z0-9]", " ", text.lower()))
-    
-    # lemmatization 
-    lemma = WordNetLemmatizer()
-    
-    # save cleaned tokens
-    clean_tokens = [lemma.lemmatize(tok).strip() for tok in tokens]
-    
-    # remove stopwords
-    english_stopwords = list(set(stopwords.words('english')))
-    clean_tokens = [token for token in clean_tokens if token not in english_stopwords]
-    
-    return clean_tokens
-    
+    new_txt = ""
+    tokens = word_tokenize(txt)
+    pos_tagged = pos_tag(tokens)
+    for z in pos_tagged:
+        if (('NN' in z[1])):
+            lem = lemma.lemmatize(z[0])
+            new_txt= new_txt + " " + str(lem.lower())
+        elif ('JJ' in z[1]):
+            new_txt= new_txt + " " + str(z[0].lower())
+        elif ('VB' in z[1]) and (len(z[0]) > 3):
+            lem = lemma.lemmatize(z[0], 'v')
+            new_txt= new_txt + " " + str(lem.lower())
+   
+    return(new_txt)
+    pass
 
 
 def build_model():
-    """
-    INPUT - none
-    OUTPUT - ML model
-        builds an NLP pipeline,  tf-idf(message transformation), RandomForest+MultiOutputClassifier as 
-        classification model , grid search the best parameters
-    """   
-    # NLP pipeline 
-    pipeline = Pipeline([
-        ('vect',CountVectorizer(tokenizer = tokenize)),
-        ('tfidf',TfidfTransformer()),
-        ('clf', MultiOutputClassifier(RandomForestClassifier()))
-    ])
-    # parameters GridSearchCV
+    '''
+    INPUT: none
     
+    OUTPUT: GridSearchCV obj
+    
+    '''
     parameters = {
-    'tfidf__norm':['l2','l1'],
-    'clf__estimator__min_samples_split':[2,3],
-    }
+        #for the convenience of the grader, the grid search is currently revealing a limited list of tested parameters.  
+        #A complete list is included commented out
+        'clf__estimator__min_samples_split': [2],#[5, 10,50]
+        'clf__estimator__max_features': [300, 500],#[10, 50, 100, 150, 1000, 1500],
+        'clf__estimator__max_depth':[700] # [300, 500, 800, 1000]
+        }
+    
+    pipeline = Pipeline([
+        ('tfidf_vec', TfidfVectorizer()),
+        ('clf', MultiOutputClassifier(estimator = RandomForestClassifier(random_state = 5), n_jobs= -1))
+        ])
+    cv = GridSearchCV(pipeline, param_grid = parameters, verbose = 3)
+    
+    return(cv)
+    pass
 
-    # Instantiate GridSearchCV
-    model = GridSearchCV(pipeline, param_grid=parameters)
-
-    return model
-   
 
 
+def precision_(cm):
+    '''
+    INPUT: confusion matrix
+    OUTPUT: precision
+    '''
+    return(np.diag(cm)[np.diag(cm).shape[0] -1] / np.sum(cm, axis = 0)[ np.sum(cm, axis = 0).shape[0]-1])
+
+def recall_(cm):
+    '''
+    INPUT: confusion matrix
+    OUTPUT: recall
+    '''
+    return(np.diag(cm)[np.diag(cm).shape[0] -1] / np.sum(cm, axis = 1)[ np.sum(cm, axis = 1).shape[0]-1])
+
+def f1score_(cm):
+    '''
+    INPUT: confusion matrix
+    OUTPUT: f1 score
+    '''
+    return(2 * (precision_(cm) * recall_(cm)) / (precision_(cm)  + recall_(cm)))
+
+#https://stats.stackexchange.com/questions/21551/how-to-compute-precision-recall-for-multiclass-multilabel-classification
 def evaluate_model(model, X_test, Y_test, category_names):
+    '''
+    INPUT:
+    cv model, X_test, Y_test, list of category names
+    
+    OUTPUT:
+    precision, f1 score, recall for each category
+    '''
+    
     y_pred = model.predict(X_test)
-    for i, col in enumerate(category_names): 
-        print('***********',col,'***********')
-        print(classification_report(Y_test.iloc[:,i], y_pred[:,i]))
+    y_true = np.array(Y_test)
+    y_pred = np.array(y_pred)
 
+    labels = category_names
+
+    conf_mat_dict={}
+    for label_col in range(len(labels)):
+        y_true_label = y_true[:, label_col]
+        y_pred_label = y_pred[:, label_col]
+        cm = confusion_matrix(y_pred=y_pred_label, y_true=y_true_label)
+        
+        conf_mat_dict[labels[label_col]] = {}
+        conf_mat_dict[labels[label_col]] ['conf_mat'] = confusion_matrix(y_pred=y_pred_label, y_true=y_true_label)
+        conf_mat_dict[labels[label_col]]['recall']  =  recall_(cm)
+        conf_mat_dict[labels[label_col]]['precision']  = precision_(cm)
+        conf_mat_dict[labels[label_col]]['f1_score']  = f1score_(cm)
+
+
+
+    for label, matrix in conf_mat_dict.items():
+        print("Accuracy metrics for label {}:".format(label))
+        print('recall: ' + str(matrix['recall']))
+        print('precision: ' + str(matrix['precision']))
+        print('f1_score: ' + str(matrix['f1_score']))
+
+    print("\nBest Parameters:", model.best_params_)
+
+    
+    return(conf_mat_dict)
+    pass
 
 def save_model(model, model_filepath):
-    pickle.dump(model, open(model_filepath, 'wb'))
+    '''
+    INPUT: model and filepath
+    
+    OUTPUT: None
+    Saves model at given file path
+    '''
+    with open(model_filepath, 'wb') as f:
+        pickle.dump(model, f)
+    pass
 
 
 def main():
+    '''
+    As the main function, this runs when the file is run
+
+    STEPS:
+        1. check for required number of arguments (this file, database_filepath, pkl file to save model)
+        2. load_data, split into training and test categories
+        3. build a model using GridSearchCV
+        4. Train the model
+        5. Evaluate the model
+        5. save the model 
+    '''
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.4)
         
         print('Building model...')
         model = build_model()

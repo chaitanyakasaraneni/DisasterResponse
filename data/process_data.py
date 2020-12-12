@@ -1,73 +1,84 @@
 import sys
 import pandas as pd
-import numpy as np
-from sqlalchemy.engine import create_engine
+import sqlite3
+conn = sqlite3.connect('./data/DisasterResponse.db')
+
+def clean_cat_col(col_name, categories):
+    '''
+    INPUT: 
+    series of columns where there is a regex leading a value that should be the title
+    
+    OUTPUT: 
+    renamed column with 0,1s recast as floats
+    '''
+    new_name = categories[col_name][0].split('-')[0]
+    categories = categories.rename({col_name: new_name}, axis='columns')
+    categories[new_name] = [float(i.replace(new_name + '-', '')) for i in categories[new_name]]
+    return(categories)
+    pass 
+
+
 
 def load_data(messages_filepath, categories_filepath):
     '''
-    INPUT - messages csv file name and file path
-            categories csv file name and file path
-    OUTPUT - pandas dataframe 
-           1. read the message file into a pandas dataframe
-           2. read the categories file into a pandas dataframe
-           3. merge the messages dataframe and catergories dataframe
-           4. return the merged dataframe
+    INPUT: two filepaths
+    
+    OUTPUT: data
     '''
-
-    # load messages and categories
-    messages=pd.read_csv(messages_filepath)
-    categories=pd.read_csv(categories_filepath)
-    
-    # merge dataframes
-    df = pd.merge(messages, categories, on = 'id')
-    
-    return df
+    messages = pd.read_csv(messages_filepath)
+    categories = pd.read_csv(categories_filepath)
+    data = messages.merge(categories, left_on = 'id', right_on = 'id', how = 'inner')
+    return(data)
+    pass
 
 
 def clean_data(df):
     '''
-    INPUT - pandas  dataframe
-    OUTPUT - pandas dataframe with cleaned data
-        1. create categories dataframe by spliting the categories column by ';'
-        2. rename the new columns created by splitting the categories with the category values.
-        3. Convert category values to just numbers 0 or 1.
-        4. merge the input dataframe and the message categories split columnn
-        5. remove any duplicate messages
+    INPUT: df to clean    
+    
+    OUTPUT: clean df
+    
+    STEPS: 
+        1. drop any rows with no message
+        2. transform the categories column into a usable dataframe full of dummy vars
+        3. replace original categories with series of columns representing values
+        4. clean the messages in question
+        5. for col related, as it has some mistyped 2s, replace with column mode; if any columns are completely
+            uniform, it also drops
     '''
+    fillmode = lambda col : col.fillna(col.mode()[0])
+    
+    df = df.dropna(subset = ['message'], axis = 0, how = 'any')
+    df = df.drop_duplicates(subset = ['message'], keep = 'first')
 
-    # Split the values in the categories column on the ;
-    categories = df['categories'].str.split(';', expand=True)
 
-    # Rename columns of categories with new column names.
-    row = categories.iloc[1]
-    category_colnames = row.apply(lambda x: x.split('-')[0])
-    categories.columns = category_colnames
-
-    # Convert category values to just numbers 0 or 1
-    for column in categories:
-        categories[column] = categories[column].apply(lambda x: int(x.split('-')[1]))
-
-    # Replace categories column in df with new category columns.
-    df.drop('categories', axis = 1, inplace = True)
-    df = df.join(categories)
-
-    # drop duplicates
-    df = df.drop_duplicates()
-    return df
+    categories = df.categories.str.split(';', expand=True)
+    for i in categories.columns:
+        categories = clean_cat_col(i, categories)
+    categories['id'] = df['id']
+    df = df.drop('categories', axis = 1)
+    df = df.merge(categories, left_on = 'id', right_on = 'id', how = 'inner')
+    
+    
+    df = df[[i for i in list(df) if len(df[i].unique()) > 1]]   
+    df.loc[(df.related == 2),'related'] = df['related'].mode()[0]
+    df = df.apply(fillmode)
+    return(df)
+    pass
 
 
 def save_data(df, database_filename):
     '''
-    INPUT - panda dataframe , database file name 
-    OUTPUT - pandas dataframe data stored to the database file 
-        1. Create a SQLlite database using SQLAlchamey packages
-        2. Load the input dataframe to the the SQL database.
+    INPUT: dataframe, the desired name of the file
+
+    OUTPUT: none
+
+    saves file as sql
     '''
-    # Create database engine object
-    engine = create_engine('sqlite:///' + database_filename)
-    df.to_sql('DisasterResponse', engine, if_exists='replace', index=False)
-    engine.dispose()
-   
+    df.to_sql(database_filename, con = conn)
+    pass  
+
+
 def main():
     if len(sys.argv) == 4:
 
