@@ -1,5 +1,7 @@
 # Disaster Response Pipeline Project
 
+#### Checkout the deployed version of this project on [Heroku](https://disastermessage-classification.herokuapp.com/)
+
 ### Introduction
 Goal of this project is to build a ML pipeline that can classify disterss messages originating from social media during a natural disaster. In addition, emergencey care workers should have access to the classifcation ML model via a web frontend. Interacting with the frontend, a care worker can input the message and get the message classified into one of the 36 categories
 
