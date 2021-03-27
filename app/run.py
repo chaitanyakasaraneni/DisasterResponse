@@ -5,14 +5,16 @@ import numpy as np
 import os
 import sys
 
+
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from nltk import pos_tag
 sno = nltk.stem.SnowballStemmer('english')
 
-from flask import Flask
+from flask import Flask, abort
 from flask import render_template, request, jsonify
+from flask_cors import CORS
 from plotly.graph_objs import Bar
 try:
     from sklearn.externals import joblib
@@ -26,7 +28,11 @@ import plotly.graph_objects as goplot
 
 app = Flask(__name__)
 
-
+####################################
+#
+#   DATA PROCESSING
+#
+####################################
 def get_col_sample(df, samplen):
     '''
     INPUT: 
@@ -37,7 +43,7 @@ def get_col_sample(df, samplen):
     '''
     return(df.sample(n=samplen, replace=True, random_state=1).reset_index(drop = True))
 
-def tokenize (txt):  
+def tokenize(txt):  
     '''
     INPUT: 
     a line of text
@@ -72,10 +78,21 @@ def tokenize (txt):
 engine = create_engine('sqlite:///../data/DisasterResponse.db')
 df = pd.read_sql_table('data/DisasterResponse.db', engine)
 
+####################################
+#
+#   DATA PROCESSING ENDS
+#
+####################################
+
 # load model
 model = joblib.load("../models/classifier.pkl")
 balanced_df = pd.read_csv('../data/balanced_df.csv', index_col = 0)
 
+####################################
+#
+#   FLASK APP ROUTES
+#
+####################################
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
 @app.route('/index')
@@ -194,7 +211,7 @@ def index():
 
 
 # web page that handles user query and displays model results
-@app.route('/go')
+@app.route('/classify')
 def go():
     '''
     takes user input and returns predictions
@@ -208,11 +225,120 @@ def go():
 
     # This will render the go.html Please see that file. 
     return render_template(
-        'go.html',
+        'classify.html',
         query=query,
         classification_result=classification_results
     )
 
+####################################
+#
+#   FLAS APP END
+#
+####################################
+
+
+####################################
+#
+#   API DECLARATION
+#
+####################################
+@app.route('/classify', methods=['POST'])
+def api_classify():
+
+    query = request.get_json()
+
+    if not query:
+        abort(422, {'message': 'Unprocessable Data in Request'})
+    
+    inp = query.get('query', ' ')
+
+    if not inp:
+        abort(422, {'message': '{} cannot be blank'.format('Input message')})
+
+    try:
+        # use model to predict classification for query
+        classification_labels = model.predict([inp])[0]
+        classification_results = dict(zip(df.columns[5:], classification_labels))
+        result = []
+        for category, classification in classification_results.items():
+            if classification == 1 or classification == 1.0:
+                result.append(category.replace('_', ' ').title())
+
+        return jsonify({
+            "success": True,
+            "query": inp,
+            "classification_result": result
+        })
+    except Exception:
+        abort(400, description={'message': 'Sorry! Our application Failed to classify message'})
+####################################
+#
+#   END API DECLARATION
+#
+####################################
+
+
+####################################
+#
+#   API ERROR HANDLING BEGINS
+#
+####################################
+'''
+    404 ERROR
+'''
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'success': False,
+        'error': 404,
+        'message': get_error_message(error, 'Resource Not Found')
+    }), 404
+
+'''
+    422 ERROR
+'''
+@app.errorhandler(422)
+def unprocessable(error):
+    return jsonify({
+        'success': False,
+        'error': 422,
+        'message': get_error_message(error, 'Unprocessable Data')
+    }), 422
+
+'''
+    400 ERROR
+'''
+@app.errorhandler(400)
+def badrequest(error):
+    return jsonify({
+        'success': False,
+        'error': 400,
+        'message': get_error_message(error, 'Sorry! Our application Failed to classify message. Please check your input')
+    }), 400
+
+
+def get_error_message(error, default_message):
+    '''
+    Returns if there is any error message provided in
+    error.description.message else default_message
+    This can be passed by calling
+    abort(404, description={'message': 'your message'})
+    Parameters:
+    error (werkzeug.exceptions.NotFound): error object
+    default_message (str): default message if custom message not available
+    Returns:
+    str: Custom error message or default error message
+    '''
+    try:
+        return error.description['message']
+    except TypeError:
+        return default_message
+
+####################################
+#
+#   API ERROR HANDLING ENDS
+#
+####################################
 
 def main():
     '''
