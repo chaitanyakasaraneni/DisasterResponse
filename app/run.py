@@ -27,7 +27,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as goplot
 
 app = Flask(__name__)
-
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 ####################################
 #
 #   DATA PROCESSING
@@ -212,7 +212,7 @@ def index():
 
 # web page that handles user query and displays model results
 @app.route('/classify')
-def go():
+def classify():
     '''
     takes user input and returns predictions
     '''
@@ -223,7 +223,7 @@ def go():
     classification_labels = model.predict([query])[0]
     classification_results = dict(zip(df.columns[5:], classification_labels))
 
-    # This will render the go.html Please see that file. 
+    # This will render the classify.html Please see that file. 
     return render_template(
         'classify.html',
         query=query,
@@ -337,6 +337,21 @@ def get_error_message(error, default_message):
 ####################################
 #
 #   API ERROR HANDLING ENDS
+#
+####################################
+
+####################################
+#
+#   API USAGE PAGE
+#
+####################################
+@app.route('/api')
+def api():
+    return render_template('api.html')
+
+####################################
+#
+#   API USAGE PAGE ENDS
 #
 ####################################
 

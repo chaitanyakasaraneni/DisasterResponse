@@ -11,6 +11,25 @@
             background-color: #333333;
             color: white;
         }
+        img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .portrait {
+            height: 80px;
+            width: 30px;
+        }
+
+        .landscape {
+            height: 30px;
+            width: 80px;
+        }
+
+        .square {
+            height: 75px;
+            width: 75px;
+        }
         .copyleft {
             display:inline-block;
             transform: rotate(180deg);
@@ -22,7 +41,6 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script async defer src="https://buttons.github.io/buttons.js"></script>
 </head>
 
 <body>
@@ -41,12 +59,12 @@
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav">
-          <li class="active"><a href="/">Home</a></li>
+          <li><a href="/">Home</a></li>
           <li><a href="https://github.com/chaitanyakasaraneni/DisasterResponse">Source Code</a></li>
-          <li><a href="{{ url_for('api') }}">Classify messages using API</a></li>          
+          <li class="active"><a href="{{ url_for('api') }}">Classify messages using API</a></li>          
         </ul>
         <ul class="nav navbar-nav navbar-right">
-          <li><a href="https://chaitanyak.me/contact">Contact Author</a></li> 
+          <li><a href="https://chaitanyak.me/contact">Contact Author</a></li>
         </ul>
       </div><!--/.nav-collapse -->
     </div>
@@ -56,48 +74,35 @@
 <div class="jumbotron">
     <div class="container">
         <h1 class="text-center">Disaster Message Classification</h1>
-        <p class="text-center">Analyzing message data for disaster response</p>
         <hr />
         <center>
             <iframe src="https://ghbtns.com/github-btn.html?user=chaitanyakasaraneni&repo=DisasterResponse&type=star&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
             <iframe src="https://ghbtns.com/github-btn.html?user=chaitanyakasaraneni&repo=DisasterResponse&type=fork&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
         </center>
         <br>
-        <div class="row">
-            <div class="col-lg-12 form-group-lg">
-                <form action="/classify" method="get">
-                    <input type="text" class="form-control form-control-lg" name="query" placeholder="Enter a message to classify"> <br>
-                    <div class="col-lg-offset-5">
-                        <button type="submit" class="btn btn-lg btn-success">Classify Message</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        {% block message %}
-        {% endblock %}
+        <h3 id="using-api-a-name-api-a-">Using API<a name="api"></a></h3>
+    <p>Alternative to the webapp, you can classify message using API. To do this you need to &quot;POST&quot; request your message in JSON format. </p>
+    <h4 id="api-request-using-curl">API request using curl</h4>
+    <pre><code><span class="hljs-string">curl </span><span class="hljs-built_in">--location</span> <span class="hljs-built_in">--request</span> <span class="hljs-string">POST </span><span class="hljs-string">'https://disastermessage-classification.herokuapp.com/classify'</span> \
+    <span class="hljs-built_in">--header</span> <span class="hljs-string">'Content-Type: application/json'</span> \
+    <span class="hljs-built_in">--data-raw</span> <span class="hljs-string">'{
+        "query":"&lt;YOUR_MESSAGE&gt;"
+    }'</span>
+    </code></pre><p>And the response would be something as shown below:</p>
+    <pre><code>{
+    <span class="hljs-attr">"classification_result"</span>: [
+        &lt;YOUR_PREDICTED_OUTPUT&gt;
+    ], 
+    <span class="hljs-attr">"query"</span>: <span class="hljs-string">"&lt;YOUR_MESSAGE&gt;"</span>, 
+    <span class="hljs-attr">"success"</span>: <span class="hljs-literal">true</span>
+    }
+    </code></pre>
+    <h4 id="api-request-and-response-using-postman">API request and response using Postman</h4>
+    <img src="{{url_for('static',filename = 'images/sample_request.png')}}" alt="Example Request and Response">
+    <p class="text-center">Example Request and Response using Postman</p>
     </div>
 </div>
 
-<div class="container">
-    {% block content %}
-        <div class="page-header">
-            <h1 class="text-center">Overview of Training Dataset</h1>
-        </div>
-    {% endblock %}
-
-    {% for id in ids %}
-        <div id="{{id}}"></div>
-    {% endfor %}
-</div>
-
-<script type="text/javascript">
-    const graphs = {{graphJSON | safe}};
-    const ids = {{ids | safe}};
-    for(let i in graphs) {
-        Plotly.plot(ids[i], graphs[i].data, graphs[i].layout);
-    }
-</script>
 <footer>
     <div class="container">
         <div class="navbar-header">
