@@ -9,6 +9,7 @@
 4. [Instructions to Run](#run)
 5. [Screenshots](#screen)
 6. [API](#api)
+7. [Coming Soon](#soon)
 
 ### Introduction<a name="introduction"></a>
 Goal of this project is to build a ML pipeline that can classify disterss messages originating from social media during a natural disaster. In addition, emergencey care workers should have access to the classifcation ML model via a web frontend. Interacting with the frontend, a care worker can input the message and get the message classified into one of the 36 categories
@@ -90,3 +91,6 @@ And the response would be something as shown below:
 #### API request and response using Postman
 ![Example Request and Response](https://github.com/chaitanyakasaraneni/DisasterResponse/blob/disaster_response/images/sample_request.png)
 <p align="center">Example Request and Response using Postman</p>
+
+#### Coming soon
+Role-based access control (RBAC) for API using Auth0
