@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 import pandas as pd
 import numpy as np
 import pickle
+import joblib
 
 from nltk import pos_tag
 from nltk.tokenize import word_tokenize
@@ -122,7 +123,7 @@ def build_model():
     
     pipeline = Pipeline([
         ('tfidf_vec', TfidfVectorizer()),
-        ('clf', MultiOutputClassifier(estimator = RandomForestClassifier(random_state = 5), n_jobs= -1))
+        ('clf', MultiOutputClassifier(estimator = RandomForestClassifier(random_state = 5)))
         ])
     cv = GridSearchCV(pipeline, param_grid = parameters, verbose = 3)
     
