@@ -4,10 +4,7 @@ from sqlalchemy import create_engine
 
 import pandas as pd
 import numpy as np
-try:
-    from sklearn.externals import joblib
-except:
-    import joblib
+import joblib
 
 from nltk import pos_tag
 from nltk.tokenize import word_tokenize
