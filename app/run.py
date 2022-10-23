@@ -16,7 +16,10 @@ from flask import Flask, abort
 from flask import render_template, request, jsonify
 from flask_cors import CORS
 from plotly.graph_objs import Bar
-import joblib
+try:
+    from sklearn.externals import joblib
+except:
+    import joblib
 
 from sqlalchemy import create_engine
 
