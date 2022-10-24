@@ -9,6 +9,7 @@ import joblib
 from nltk import pos_tag
 from nltk.tokenize import word_tokenize
 import nltk
+nltk.download('omw-1.4')
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.datasets import make_multilabel_classification
