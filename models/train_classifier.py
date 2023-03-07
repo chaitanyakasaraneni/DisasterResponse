@@ -193,7 +193,6 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
     
     return(conf_mat_dict)
-    pass
 
 def save_model(model, model_filepath):
     '''
@@ -202,9 +201,7 @@ def save_model(model, model_filepath):
     OUTPUT: None
     Saves model at given file path
     '''
-    with open(model_filepath, 'wb') as f:
-        joblib.dump(model, f)
-    pass
+    joblib.dump(model, model_filepath)
 
 
 def main():
