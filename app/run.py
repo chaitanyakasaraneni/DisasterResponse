@@ -362,7 +362,7 @@ def main():
     if len(sys.argv) == 2:
         app.run(host='0.0.0.0', port=int(sys.argv[1]), debug=True)
     else:
-        port = int(os.environ.get('PORT', 5000))
+        port = int(os.environ.get('PORT', 3001))
         app.run(host='0.0.0.0', port=port)
   
 
