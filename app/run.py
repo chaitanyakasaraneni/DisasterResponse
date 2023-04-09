@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-
+import logging as log
 
 import nltk
 from nltk.stem import WordNetLemmatizer
@@ -74,10 +74,11 @@ def tokenize(txt):
 # load data
 # Get the current directory of the app.py file
 db_path = os.path.join(os.path.dirname(__file__), 'data', 'DisasterResponse.db')
+log.info('db_path: {}'.format(db_path))
 # create the SQLAlchemy engine
 engine = create_engine('sqlite:///{}'.format(db_path))
 
-df = pd.read_sql_table('data/DisasterResponse.db', engine)
+df = pd.read_sql_table('DisasterResponse', engine)
 
 ####################################
 #

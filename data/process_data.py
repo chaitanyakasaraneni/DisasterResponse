@@ -1,7 +1,6 @@
 import sys
 import pandas as pd
-import sqlite3
-conn = sqlite3.connect('./data/DisasterResponse.db')
+from sqlalchemy.engine import create_engine
 
 def clean_cat_col(col_name, categories):
     '''
@@ -75,8 +74,9 @@ def save_data(df, database_filename):
 
     saves file as sql
     '''
-    df.to_sql(database_filename, con = conn)
-    pass  
+    engine = create_engine('sqlite:///' + database_filename)
+    df.to_sql('DisasterResponse', engine, if_exists='replace', index=False)
+    engine.dispose()
 
 
 def main():
