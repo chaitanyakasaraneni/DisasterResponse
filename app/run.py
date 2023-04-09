@@ -71,9 +71,13 @@ def tokenize(txt):
     return(new_txt)
     pass
 
-# load data
+# paths
 # Get the current directory of the app.py file
-db_path = os.path.join(os.path.dirname(__file__), '..' ,'data', 'DisasterResponse.db')
+path_to_folders = os.path.join(os.path.dirname(__file__), '..')
+data_path = os.path.join(path_to_folders, 'data')
+
+# load data
+db_path = os.path.join(data_path, 'DisasterResponse.db')
 print('db_path: {}'.format(db_path))
 # create the SQLAlchemy engine
 engine = create_engine('sqlite:///{}'.format(db_path))
@@ -87,8 +91,9 @@ df = pd.read_sql_table('DisasterResponse', engine)
 ####################################
 
 # load model
-model = joblib.load("../models/classifier.pkl")
-balanced_df = pd.read_csv('../data/balanced_df.csv', index_col = 0)
+model_path = os.path.join(path_to_folders, 'models', 'classifier.pkl')
+model = joblib.load(model_path)
+balanced_df = pd.read_csv(os.path.join(data_path, 'balanced_df.csv'), index_col = 0)
 
 ####################################
 #
@@ -113,8 +118,7 @@ def index():
     # create visuals for the raw data
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    
-    not_y = ['index','id', 'message', 'original', 'genre']
+    not_y = ['id', 'message', 'original', 'genre']
     Y = df.drop(not_y, axis = 1)
     category_names = list(Y.columns)
     category_counts = list(Y.sum(axis = 0).values)
