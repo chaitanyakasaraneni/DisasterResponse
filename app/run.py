@@ -73,8 +73,8 @@ def tokenize(txt):
 
 # load data
 # Get the current directory of the app.py file
-db_path = os.path.join(os.path.dirname(__file__), 'data', 'DisasterResponse.db')
-log.info('db_path: {}'.format(db_path))
+db_path = os.path.join(os.path.dirname(__file__), '..' ,'data', 'DisasterResponse.db')
+print('db_path: {}'.format(db_path))
 # create the SQLAlchemy engine
 engine = create_engine('sqlite:///{}'.format(db_path))
 
