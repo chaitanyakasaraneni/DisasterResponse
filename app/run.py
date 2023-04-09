@@ -82,7 +82,7 @@ print('db_path: {}'.format(db_path))
 # create the SQLAlchemy engine
 engine = create_engine('sqlite:///{}'.format(db_path))
 
-df = pd.read_sql_table('DisasterResponse', engine)
+df = pd.read_sql_table('data/DisasterResponse.db', engine)
 
 ####################################
 #
@@ -118,7 +118,7 @@ def index():
     # create visuals for the raw data
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    not_y = ['id', 'message', 'original', 'genre']
+    not_y = ['index','id', 'message', 'original', 'genre']
     Y = df.drop(not_y, axis = 1)
     category_names = list(Y.columns)
     category_counts = list(Y.sum(axis = 0).values)
